@@ -18,5 +18,6 @@
 void bch_enc(const unsigned char *m, // input message bytes
 	     unsigned char redundent[23]) ;  // output 23 Bytes redundent
 
+void bch_dec(const unsigned char d[2112], unsigned char errval[2089]);
 
 #endif

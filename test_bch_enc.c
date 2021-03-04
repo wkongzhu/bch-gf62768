@@ -14,31 +14,67 @@
 
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include "bch.h"
-
+/*
+  m为信息byte,  r为冗余校验byte, 排列如下:
+  m[0], m[1], ..., m[2089], r[0], r[1], ..., r[22]
+*/
 void get_msg_from_file(FILE *f, unsigned char *msg) {
-  for(int i=2088; i>=0; i--) {
-    fscanf(f, "%hhx ", &msg[i]); /* unsigned char input using hex format; 1st line number in 
-				    the last enter into encoder */
+  for(int i=0; i<2089; i++) {
+    fscanf(f, "%hhx ", &msg[i]); /* unsigned char input using hex format */
+  }
+}
+
+void error_inject(unsigned char r[2112]){
+  int num, byte_location, bit_location;
+  num = rand() % 13; // 0~12 error bits
+  printf("\t---- Total %d Error bits injection\n", num);
+  for(int i=0; i<num; i++) {
+    byte_location = rand() % 2112;
+    bit_location = rand() % 8;
+    r[byte_location] ^= 1<<bit_location;
+    printf("\t\t=>Error Injdect: (%d, %d)\n", byte_location, bit_location);
   }
 }
 
 int main() {
+  FILE *fp1;
   unsigned char msg[2089];
   unsigned char rdt[23];
+  unsigned char rev[2112], dec_dat[2089], errval[2089]; // 2089 + 23
+  
   char file_name[] = "message.txt";
   FILE *fp = fopen(file_name, "r");
   get_msg_from_file(fp, msg);
   fclose(fp);
-  printf("msg[2088]=%x, msg[0]=%x\n", msg[2088], msg[0]);
 
   bch_enc(msg, rdt);
-  
   printf("redundent = \n");
   for(int i=0; i<23; i++) {
     printf("%2x ", rdt[i]);
   }
   printf("\n");
   // for initial version of message.txt, the expected redundent output is :
-  //       2b 41 ab 90 98 fd 31 8f 68 bd 3b  8 cc 8e c8 b5 bb e5 d6 d3 53 f2 f0 
+  //       77 42 dd e7 6e a9 36 a3 5d 11 85 ee c8 28 e4 17 13 57 d3 43 d2 f1 30
+
+  if( !memcpy(rev, msg, 2089) || !memcpy(&rev[2089], rdt, 23) ) {
+    printf("Error Copy message and redundent to rev buffer.\n");
+  }
+
+  fp1=fopen("rev_dat.dat","w");
+  for(int i=0; i<2112; i++)
+    fprintf(fp1, "%02x\n", rev[i]);
+  fclose(fp1);
+  error_inject(rev);
+
+  bch_dec(rev, errval);
+  
+  for(int i=0; i<2089; i++){
+    dec_dat[i] = rev[i] ^ errval[i];
+    if(errval[i] != 0)
+      printf("error byte:%d;  rev dat:%x;  dec dat:%x\n",i+1,rev[i],dec_dat[i]);
+  }
+
 }
