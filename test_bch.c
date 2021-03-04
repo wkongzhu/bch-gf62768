@@ -22,14 +22,8 @@
 
 /*
   m为信息byte,  r为冗余校验byte, 排列如下:
-  m[0], m[1], ..., m[2089], r[0], r[1], ..., r[22]
+  codeword = {m[0], m[1], ..., m[2089], r[0], r[1], ..., r[22]}
 */
-void get_msg_from_file(FILE *f, unsigned char *msg) {
-  for(int i=0; i<2089; i++) {
-    fscanf(f, "%hhx ", &msg[i]); /* unsigned char input using hex format */
-  }
-}
-
 void error_inject(unsigned char r[2112]){
   int num, byte_location, bit_location;
   num = rand() % 14; // 0~12 error bits可纠错, 当num==13的时候不可纠错
@@ -49,12 +43,9 @@ int main() {
   int num_ebits;
   srand(time(NULL));
   
-  char file_name[] = "message.txt";
-  FILE *fp = fopen(file_name, "r");
-  get_msg_from_file(fp, msg);
-  fclose(fp);
+  for(int i=0; i<2089; i++) msg[i] = rand();
 
-  bch_enc(msg, rdt);
+  bch_enc(msg, rdt); // BCH编码, 输入msg, 输出rdt
 
 #ifdef  _DEBUG_VERBOSE_
   printf("redundent = \n");
@@ -88,7 +79,7 @@ int main() {
   for(int i=0; i<2112; i++){
     dec_dat[i] = rev[i] ^ errval[i];
     if(errval[i] != 0)
-      printf("error byte:%d;  rev dat:%x;  dec dat:%x\n",i, rev[i], dec_dat[i]);
+      printf("error byte:%d;  rev dat:0x%x;  dec dat:0x%x, errval=%d\n",i, rev[i], dec_dat[i], errval[i]);
   }
   return 0;
 }
