@@ -16,7 +16,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include "bch.h"
+//#define _DEBUG_VERBOSE_
+
 /*
   m为信息byte,  r为冗余校验byte, 排列如下:
   m[0], m[1], ..., m[2089], r[0], r[1], ..., r[22]
@@ -29,7 +32,7 @@ void get_msg_from_file(FILE *f, unsigned char *msg) {
 
 void error_inject(unsigned char r[2112]){
   int num, byte_location, bit_location;
-  num = rand() % 13; // 0~12 error bits
+  num = rand() % 14; // 0~12 error bits可纠错, 当num==13的时候不可纠错
   printf("\t---- Total %d Error bits injection\n", num);
   for(int i=0; i<num; i++) {
     byte_location = rand() % 2112;
@@ -40,10 +43,11 @@ void error_inject(unsigned char r[2112]){
 }
 
 int main() {
-  FILE *fp1;
   unsigned char msg[2089];
   unsigned char rdt[23];
-  unsigned char rev[2112], dec_dat[2089], errval[2089]; // 2089 + 23
+  unsigned char rev[2112], dec_dat[2112], errval[2112]; // 2089 + 23
+  int num_ebits;
+  srand(time(NULL));
   
   char file_name[] = "message.txt";
   FILE *fp = fopen(file_name, "r");
@@ -51,30 +55,40 @@ int main() {
   fclose(fp);
 
   bch_enc(msg, rdt);
+
+#ifdef  _DEBUG_VERBOSE_
   printf("redundent = \n");
   for(int i=0; i<23; i++) {
     printf("%2x ", rdt[i]);
   }
   printf("\n");
-  // for initial version of message.txt, the expected redundent output is :
-  //       77 42 dd e7 6e a9 36 a3 5d 11 85 ee c8 28 e4 17 13 57 d3 43 d2 f1 30
+#endif
 
   if( !memcpy(rev, msg, 2089) || !memcpy(&rev[2089], rdt, 23) ) {
     printf("Error Copy message and redundent to rev buffer.\n");
   }
 
+#ifdef  _DEBUG_VERBOSE_
+  FILE *fp1;
   fp1=fopen("rev_dat.dat","w");
   for(int i=0; i<2112; i++)
     fprintf(fp1, "%02x\n", rev[i]);
   fclose(fp1);
+#endif
+
   error_inject(rev);
 
-  bch_dec(rev, errval);
-  
-  for(int i=0; i<2089; i++){
+  num_ebits = bch_dec(rev, errval);
+  if(num_ebits == -1) {
+    printf("\n\t---- Uncorrected Error for BCH, maybe number of error bits is greater than 12\n");
+    exit(-1);
+  } else {
+    printf("\n\t---- Successfully Decoded: totally <<  %d  >> Error bits corrected\n", num_ebits);
+  }
+  for(int i=0; i<2112; i++){
     dec_dat[i] = rev[i] ^ errval[i];
     if(errval[i] != 0)
-      printf("error byte:%d;  rev dat:%x;  dec dat:%x\n",i+1,rev[i],dec_dat[i]);
+      printf("error byte:%d;  rev dat:%x;  dec dat:%x\n",i, rev[i], dec_dat[i]);
   }
-
+  return 0;
 }

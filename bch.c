@@ -45,7 +45,7 @@ void poly_xor(unsigned char *msg) { // just xor POLY (180+4)bits
   }
 }
 
-void bch_enc(const unsigned char *m, // input message bytes
+void bch_enc(const unsigned char m[2089], // input message bytes
 	     unsigned char redundent[23]) { // output 23 Bytes redundent
   unsigned char msb;
   unsigned char msg[2089];
@@ -95,9 +95,9 @@ unsigned short gf15mul(unsigned short x, unsigned short y)
   return(z);
 }
 
-unsigned short *ibm(unsigned short s[24])
+int ibm(const unsigned short s[24], unsigned short v[13])
 {
- static unsigned short v[13] = {1,0,0,0,0,0,0,0,0,0,0,0,0};
+  //v = {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
   unsigned short kappa[13] =   {1,0,0,0,0,0,0,0,0,0,0,0,0};
   unsigned short delta = 1;
   unsigned short d = s[0];
@@ -109,7 +109,8 @@ unsigned short *ibm(unsigned short s[24])
   unsigned short dtmp_n[24];
   unsigned short kappa_tmp[13];
   unsigned short d_tmp;
-
+  for(int i=1; i<13; i++) v[i] = 0;
+  v[0] = 1;
   for(int i=0; i<3; i++)
     dtmp[i] = s[2-i];
   for(int i=3; i<24; i++)
@@ -163,12 +164,13 @@ unsigned short *ibm(unsigned short s[24])
         deg_v = i;
     }
   }
-  return(v);
+  return deg_v;
 }
 
 
-void ChienSearch(unsigned short v[],int vlen,unsigned char errval[],int elen)
+int ChienSearch(unsigned short v[],int vlen,unsigned char errval[],int elen)
 {
+  int total_sbits = 0;
   unsigned short A[13],B[13],p[13],vmul[13];
   unsigned short sum;
   unsigned char t=0x01;
@@ -188,17 +190,38 @@ void ChienSearch(unsigned short v[],int vlen,unsigned char errval[],int elen)
         p[k] = gf15mul(A[k],B[k]);
         sum = sum ^ p[k]; 
       }
-      if(sum == 0)   errval[i] = errval[i] | (t<<(7-j));
+      if(sum == 0)   {
+	total_sbits++;
+	errval[i] = errval[i] | (t<<(7-j));
+      }
       for(int k=1; k<13; k++)  vmul[k] = p[k];
     }
   }
+  return total_sbits;
 }
 
-void bch_dec(const uchar dat[2112], uchar errval[2089]){
-  ushort *key,  s[24];
+/*
+  bch_dec:
+  返回值: 0~12表示0~12个bit错误, 可以纠正
+  返回值: -1表示不可纠正
+ */
+int bch_dec(const uchar dat[2112], uchar errval[2112]){
+  ushort key[13],  s[24];
+  int total_sbits; // search bits
+  int deg_v; // error location的次数
+  int error_flag = 0;
   syndrome(dat, 2112, s, 24);
+  for(int i=0; i<24; i++) {
+    if(s[i] != 0) error_flag = 1;
+  }
+  if(error_flag == 0) return 0;
 
-  key = ibm(s);
+  deg_v = ibm(s, key);
 
-  ChienSearch(key, 13, errval, 2089);
+  total_sbits = ChienSearch(key, 13, errval, 2112);
+
+  if(deg_v == total_sbits)
+    return deg_v;
+  else
+    return -1;
 }

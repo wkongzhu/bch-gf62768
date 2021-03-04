@@ -15,9 +15,17 @@
 #ifndef _RAYMX_BCH_H_
 #define _RAYMX_BCH_H_
 
-void bch_enc(const unsigned char *m, // input message bytes
+void bch_enc(const unsigned char m[2089], // input message bytes
 	     unsigned char redundent[23]) ;  // output 23 Bytes redundent
 
-void bch_dec(const unsigned char d[2112], unsigned char errval[2089]);
+int  bch_dec(const unsigned char d[2112], unsigned char errval[2112]);
+/*
+  bch_dec返回值说明:
+  -1   : 无法纠错, 错误bit数量大于12个.
+  0    : 没有任何错误bit出现
+  1~12 : 有出现1~12个错误bit, 但是可以被纠错, 错误值放在了errval数组里, 
+         只需要将输入值和errval对应的byte进行xor, 就可以恢复原始正确数值
+	 即:   correted_data[i] = d[i] ^ errval[i];
+ */
 
 #endif
