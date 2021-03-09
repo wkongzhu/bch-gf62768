@@ -14,7 +14,7 @@
  *  中文说明:
  *  BCH编解码子程序:
  *      输入2089 bytes的message数组, 经过bch_enc()编码,得到23 bytes的校验冗余, 将此23个bytes拼接在2089数组的后面,
- *      构成一个2012 bytes的cordword数组. 此cordword存放到flash里面或者通过channel发送到接收方.
+ *      构成一个2112 bytes的cordword数组. 此cordword存放到flash里面或者通过channel发送到接收方.
  *      从flash里面读出cordword之后,有可能其中有数据损坏:
  *           (*)  当cordword没有任何错误的时候, bch_decc()返回0.
  *           (*)  当错误bit总数小于等于12 bits的时候, 经过BCH解码电路, bch_dec()返回错误bit的数量,
@@ -23,8 +23,8 @@
  *           (*)  当错误bits总数大于12 bits的时候,此BCH解码电路无法纠错. bch_dec()函数返回-1.
  */
 
-#ifndef _RAYMX_BCH_H_
-#define _RAYMX_BCH_H_
+#ifndef _BCH2112_H_
+#define _BCH2112_H_
 
 void bch_enc(const unsigned char m[2089], // input message bytes
 	     unsigned char redundent[23]) ;  // output 23 Bytes redundent

@@ -179,7 +179,7 @@ int ChienSearch(unsigned short v[],int vlen,unsigned char errval[],int elen)
 			    0x100, 0x200, 0x400, 0x800, 0x1000};
   unsigned short alpha15876[13]={0x0,    0x75c6, 0x2e72, 0x3228, 0xcfc, 0x2af6, 0x1a58, 0x47d0,
 				 0x54b0, 0x2715, 0x4c8c, 0x7088, 0x16d8};
-  for(int n=0; n<2089; n++)  errval[n]=0;
+  for(int n=0; n<elen; n++)  errval[n]=0;
   
   for(int i=0; i<elen; i++){
     for(int j=0; j<8;j++){
